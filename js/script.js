@@ -1,3 +1,5 @@
+'use strict';
+
 /* Тестовые данные */
 
 const authors = [
@@ -201,3 +203,146 @@ const authors = [
     items: [],
   },
 ];
+
+const navContainer = document.querySelector('.site-nav');
+const authorsContainer = document.querySelector('.authors');
+const booksContainer = document.querySelector('.books');
+
+const addChildElementsFromString = (parent, domString) => {
+  parent.innerHTML = '';
+  // добавляем разобранный текст как HTML перед закрывающим тегом родительского элемента (после последнего потомка)
+  parent.insertAdjacentHTML('beforeend', domString);
+};
+
+const createNavItemString = ({key, items}) =>
+  `<li class="site-nav-item">
+      <a class="site-nav-link" ${items.length > 0 ? `href="#${key}"` : ''} >${key}</a>
+    </li>
+  `;
+
+const createSectionString = ({key, items}) =>
+  `<section class="authors-section">
+      <h2 id="${key}">${key}</h2>
+      <ul class="author-list">
+        ${items.map(({author, books}) => {
+    const declension = window.getDeclension({count: books.length, one: 'книга', few: 'книги', many: 'книг'});
+    return `
+      <li class="author-item">
+        <a class="author-link" data-value="${author}" href="#">
+          <h3>${author}</h3>
+          <p>${declension}</p>
+        </a>
+      </li>
+    `;
+  }).join('')}
+      </ul>
+    </section>
+  `;
+
+const createEmptyBookString = () =>
+  `<h2>Книги</h2>
+    <p>Нажмите на автора, чтобы посмотреть список его книг</p>
+  `;
+
+const createAuthorBooksString = ({author, books}) =>
+  `<h2>${author}</h2>
+      <ul class="book-list">
+        ${books.map(({title, year, img, price, summary}) => `
+        <li class="author-item">
+          <article class="book">
+            <img src="img/${img}" width="95" height="130" alt="${title}">
+            <div class="title-wrapper">
+              <h3>${title}</h3>
+              <p class="year">${year}</p>
+            </div>
+            <p class="price">${price} <a class="cart" href="#">Купить</a></p>
+            <p class="description short">${summary}</p>
+            <a class="more" href="#">Читать дальше</a>
+          </article>
+        </li>
+      `).join('')}
+      </ul>
+  `;
+
+const render = () => {
+  const navElementsString = authors.map(createNavItemString).join('');
+  const authorsElementsString = authors.map(createSectionString).join('');
+  const emptyBookElementString = createEmptyBookString();
+
+  addChildElementsFromString(navContainer, navElementsString);
+  addChildElementsFromString(authorsContainer, authorsElementsString);
+  addChildElementsFromString(booksContainer, emptyBookElementString);
+}
+
+const authorClickHandler = (evt) => {
+  const element = evt.target.closest('a');
+
+  if (!element) {
+    return;
+  }
+  evt.preventDefault();
+
+  const {value} = element.dataset;
+
+  const authorsGroup = authors.find(({key}) => value.toUpperCase().indexOf(key.toUpperCase()) === 0);
+
+  if (authorsGroup && authorsGroup.items) {
+    const currentAuthor = authorsGroup.items.find((item) => item.author === value);
+
+    if (currentAuthor) {
+      const booksString = createAuthorBooksString(currentAuthor);
+
+      addChildElementsFromString(booksContainer, booksString);
+      setAuthorActive(element);
+    }
+  }
+};
+
+const moreLinkClickHandler = (evt) => {
+  const element = evt.target.closest('a.more');
+
+  if (!element) {
+    return;
+  }
+  evt.preventDefault();
+
+  const bookContainer = element.closest('.book');
+  const descriptionElement = bookContainer.querySelector('.description');
+
+  if (descriptionElement) {
+    descriptionElement.classList.toggle('short');
+    element.textContent = descriptionElement.classList.contains('short') ? 'Читать дальше' : 'Скрыть описание';
+  }
+};
+
+const navItemsClickHandler = (evt) => {
+  const element = evt.target.closest('a');
+
+  if (!element) {
+    return;
+  }
+  evt.preventDefault();
+
+  const blockId = element.getAttribute('href');
+
+  if (blockId && blockId !== '#') {
+    const block = document.querySelector(blockId);
+
+    if (block) {
+      block.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }
+};
+
+const init = () => {
+  render();
+
+  authorsContainer.addEventListener('click', authorClickHandler);
+  booksContainer.addEventListener('click', moreLinkClickHandler);
+  navContainer.addEventListener('click', navItemsClickHandler);
+};
+
+init();
